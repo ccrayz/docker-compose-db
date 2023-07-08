@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data/
-      
+
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter:latest
     restart: unless-stopped
