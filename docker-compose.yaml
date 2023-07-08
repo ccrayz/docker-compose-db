@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: postgres
+    restart: unless-stopped
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${POSTGRES__DATABASE_NAME}
+      POSTGRES_USER: ${POSTGRES__USER}
+      POSTGRES_PASSWORD: ${POSTGRES__PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data/
+      
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES__USER}:${POSTGRES__PASSWORD}@postgres:5432/${POSTGRES__DATABASE_NAME}?sslmode=disable
+    depends_on:
+      - postgres
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./volumes/prometheus:/prometheus
+    depends_on:
+      - postgres_exporter
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    env_file:
+      -  ./envs/grafana.env
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/:ro
+      - ./grafana/dashboards/postgresql_database_dashboard.json:/var/lib/grafana/dashboards/postgresql_database_dashboard.json
+      - ./volumes/grafana:/var/lib/grafana
+    ports:
+      - 3000:3000
